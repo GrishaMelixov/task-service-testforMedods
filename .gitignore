@@ -1,1 +1,22 @@
 .ruby-lsp
+
+# Build artefacts
+/bin/
+/dist/
+*.out
+*.test
+coverage.*
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local env overrides
+.env
+.env.local
+
+# Agent / tooling scratch
+.claude/

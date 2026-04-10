@@ -45,12 +45,13 @@ func main() {
 
 	// ── use cases ─────────────────────────────────────────────────────────────
 	taskUsecase := task.NewService(taskRepo)
-	_ = scheduleusecase.NewService(scheduleRepo) // wired into HTTP in feature/schedule-http
+	scheduleUsecase := scheduleusecase.NewService(scheduleRepo)
 
 	// ── transport ─────────────────────────────────────────────────────────────
 	taskHandler := httphandlers.NewTaskHandler(taskUsecase)
+	scheduleHandler := httphandlers.NewScheduleHandler(scheduleUsecase)
 	docsHandler := swaggerdocs.NewHandler()
-	router := transporthttp.NewRouter(taskHandler, docsHandler)
+	router := transporthttp.NewRouter(taskHandler, scheduleHandler, docsHandler)
 
 	// ── background worker ─────────────────────────────────────────────────────
 	var wg sync.WaitGroup

@@ -35,7 +35,6 @@ func makeSchedule(kind schedule.Kind, params any, start time.Time) schedule.Sche
 	}
 }
 
-
 func TestOccurrences(t *testing.T) {
 	t.Parallel()
 
@@ -50,14 +49,14 @@ func TestOccurrences(t *testing.T) {
 	}{
 		// ── daily_every_n ────────────────────────────────────────────────────────
 		{
-			name:    "daily n=1 seven-day window",
+			name:     "daily n=1 seven-day window",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 1}, mkDate(2026, 4, 1)),
-			from:    mkDate(2026, 4, 1),
-			to:      mkDate(2026, 4, 7),
-			wantLen: 7,
+			from:     mkDate(2026, 4, 1),
+			to:       mkDate(2026, 4, 7),
+			wantLen:  7,
 		},
 		{
-			name: "daily n=3 window includes anchor",
+			name:     "daily n=3 window includes anchor",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 3}, mkDate(2026, 4, 10)),
 			from:     mkDate(2026, 4, 8),
 			to:       mkDate(2026, 4, 20),
@@ -70,7 +69,7 @@ func TestOccurrences(t *testing.T) {
 		},
 		{
 			// Critical: lo is NOT on the anchor; must snap forward correctly.
-			name: "daily n=3 window does not include anchor — anchoring snap",
+			name:     "daily n=3 window does not include anchor — anchoring snap",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 3}, mkDate(2026, 4, 10)),
 			from:     mkDate(2026, 4, 11),
 			to:       mkDate(2026, 4, 20),
@@ -98,33 +97,33 @@ func TestOccurrences(t *testing.T) {
 			},
 		},
 		{
-			name:    "daily n=0 invalid — expects error",
+			name:     "daily n=0 invalid — expects error",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 0}, mkDate(2026, 4, 1)),
-			from:    mkDate(2026, 4, 1),
-			to:      mkDate(2026, 4, 7),
-			wantErr: true,
+			from:     mkDate(2026, 4, 1),
+			to:       mkDate(2026, 4, 7),
+			wantErr:  true,
 		},
 		{
-			name:    "daily n=1 large window 400 days — no overflow",
+			name:     "daily n=1 large window 400 days — no overflow",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 1}, mkDate(2026, 1, 1)),
-			from:    mkDate(2026, 1, 1),
-			to:      mkDate(2027, 2, 4), // 400 days later
-			wantLen: 400,
+			from:     mkDate(2026, 1, 1),
+			to:       mkDate(2027, 2, 4), // 400 days later
+			wantLen:  400,
 		},
 		{
-			name:    "daily n=365 over 5 years — about 5 hits",
+			name:     "daily n=365 over 5 years — about 5 hits",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 365}, mkDate(2026, 1, 1)),
-			from:    mkDate(2026, 1, 1),
-			to:      mkDate(2031, 1, 1),
-			wantLen: 6, // 2026-01-01, 2027-01-01, 2028-01-01, 2029-01-01, 2030-01-01, 2031-01-01
+			from:     mkDate(2026, 1, 1),
+			to:       mkDate(2031, 1, 1),
+			wantLen:  6, // 2026-01-01, 2027-01-01, 2028-01-01, 2029-01-01, 2030-01-01, 2031-01-01
 		},
 
 		// ── monthly_days ──────────────────────────────────────────────────────
 		{
-			name: "monthly [1,15] window spans march-april",
+			name:     "monthly [1,15] window spans march-april",
 			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{1, 15}}, mkDate(2026, 3, 1)),
-			from: mkDate(2026, 3, 1),
-			to:   mkDate(2026, 4, 30),
+			from:     mkDate(2026, 3, 1),
+			to:       mkDate(2026, 4, 30),
 			wantDates: []time.Time{
 				mkDate(2026, 3, 1),
 				mkDate(2026, 3, 15),
@@ -134,18 +133,18 @@ func TestOccurrences(t *testing.T) {
 		},
 		{
 			// Days 29 and 30 silently skipped in February non-leap.
-			name: "monthly [29,30] february 2026 non-leap produces nothing",
+			name:     "monthly [29,30] february 2026 non-leap produces nothing",
 			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{29, 30}}, mkDate(2026, 2, 1)),
-			from: mkDate(2026, 2, 1),
-			to:   mkDate(2026, 2, 28),
-			wantLen: 0,
+			from:     mkDate(2026, 2, 1),
+			to:       mkDate(2026, 2, 28),
+			wantLen:  0,
 		},
 		{
 			// Same schedule across February and March: March has both 29 and 30.
-			name: "monthly [29,30] february+march 2026 — only march hits",
+			name:     "monthly [29,30] february+march 2026 — only march hits",
 			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{29, 30}}, mkDate(2026, 2, 1)),
-			from: mkDate(2026, 2, 1),
-			to:   mkDate(2026, 3, 31),
+			from:     mkDate(2026, 2, 1),
+			to:       mkDate(2026, 3, 31),
 			wantDates: []time.Time{
 				mkDate(2026, 3, 29),
 				mkDate(2026, 3, 30),
@@ -153,33 +152,33 @@ func TestOccurrences(t *testing.T) {
 		},
 		{
 			// Feb 29 exists in 2028 (leap year).
-			name: "monthly [29] february 2028 leap year — produces Feb 29",
-			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{29}}, mkDate(2028, 2, 1)),
-			from: mkDate(2028, 2, 1),
-			to:   mkDate(2028, 2, 29),
+			name:      "monthly [29] february 2028 leap year — produces Feb 29",
+			schedule:  makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{29}}, mkDate(2028, 2, 1)),
+			from:      mkDate(2028, 2, 1),
+			to:        mkDate(2028, 2, 29),
 			wantDates: []time.Time{mkDate(2028, 2, 29)},
 		},
 		{
 			// Spec caps valid days at 30; 31 must be rejected by Occurrences.
-			name:    "monthly [31] invalid — expects error",
+			name:     "monthly [31] invalid — expects error",
 			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{31}}, mkDate(2026, 1, 1)),
-			from:    mkDate(2026, 1, 1),
-			to:      mkDate(2026, 12, 31),
-			wantErr: true,
+			from:     mkDate(2026, 1, 1),
+			to:       mkDate(2026, 12, 31),
+			wantErr:  true,
 		},
 		{
-			name:    "monthly [0] invalid — expects error",
+			name:     "monthly [0] invalid — expects error",
 			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{0}}, mkDate(2026, 1, 1)),
-			from:    mkDate(2026, 1, 1),
-			to:      mkDate(2026, 12, 31),
-			wantErr: true,
+			from:     mkDate(2026, 1, 1),
+			to:       mkDate(2026, 12, 31),
+			wantErr:  true,
 		},
 		{
 			// Validator deduplicates [15,1,15] to [1,15]; Occurrences also dedupes.
-			name: "monthly [15,1,15] deduped and sorted",
+			name:     "monthly [15,1,15] deduped and sorted",
 			schedule: makeSchedule(schedule.KindMonthlyDays, map[string]any{"days": []int{15, 1, 15}}, mkDate(2026, 4, 1)),
-			from: mkDate(2026, 4, 1),
-			to:   mkDate(2026, 4, 30),
+			from:     mkDate(2026, 4, 1),
+			to:       mkDate(2026, 4, 30),
 			wantDates: []time.Time{
 				mkDate(2026, 4, 1),
 				mkDate(2026, 4, 15),
@@ -192,8 +191,8 @@ func TestOccurrences(t *testing.T) {
 			schedule: makeSchedule(schedule.KindSpecificDates, map[string]any{
 				"dates": []string{"2026-03-15", "2026-04-10", "2026-05-01"},
 			}, mkDate(2026, 1, 1)),
-			from:    mkDate(2026, 4, 1),
-			to:      mkDate(2026, 4, 30),
+			from:      mkDate(2026, 4, 1),
+			to:        mkDate(2026, 4, 30),
 			wantDates: []time.Time{mkDate(2026, 4, 10)},
 		},
 		{
@@ -210,8 +209,8 @@ func TestOccurrences(t *testing.T) {
 			schedule: makeSchedule(schedule.KindSpecificDates, map[string]any{
 				"dates": []string{"2026-04-10", "2026-04-10", "2026-04-15"},
 			}, mkDate(2026, 1, 1)),
-			from: mkDate(2026, 4, 1),
-			to:   mkDate(2026, 4, 30),
+			from:      mkDate(2026, 4, 1),
+			to:        mkDate(2026, 4, 30),
 			wantDates: []time.Time{mkDate(2026, 4, 10), mkDate(2026, 4, 15)},
 		},
 		{
@@ -226,20 +225,20 @@ func TestOccurrences(t *testing.T) {
 
 		// ── even_odd ──────────────────────────────────────────────────────────
 		{
-			name:    "even_odd parity=even window Apr 1-5",
+			name:     "even_odd parity=even window Apr 1-5",
 			schedule: makeSchedule(schedule.KindEvenOdd, map[string]any{"parity": "even"}, mkDate(2026, 4, 1)),
-			from:    mkDate(2026, 4, 1),
-			to:      mkDate(2026, 4, 5),
+			from:     mkDate(2026, 4, 1),
+			to:       mkDate(2026, 4, 5),
 			wantDates: []time.Time{
 				mkDate(2026, 4, 2),
 				mkDate(2026, 4, 4),
 			},
 		},
 		{
-			name:    "even_odd parity=odd window Apr 28 to May 3",
+			name:     "even_odd parity=odd window Apr 28 to May 3",
 			schedule: makeSchedule(schedule.KindEvenOdd, map[string]any{"parity": "odd"}, mkDate(2026, 4, 1)),
-			from:    mkDate(2026, 4, 28),
-			to:      mkDate(2026, 5, 3),
+			from:     mkDate(2026, 4, 28),
+			to:       mkDate(2026, 5, 3),
 			wantDates: []time.Time{
 				mkDate(2026, 4, 29),
 				mkDate(2026, 5, 1),
@@ -247,11 +246,11 @@ func TestOccurrences(t *testing.T) {
 			},
 		},
 		{
-			name:    "even_odd invalid parity returns error",
+			name:     "even_odd invalid parity returns error",
 			schedule: makeSchedule(schedule.KindEvenOdd, map[string]any{"parity": "both"}, mkDate(2026, 4, 1)),
-			from:    mkDate(2026, 4, 1),
-			to:      mkDate(2026, 4, 10),
-			wantErr: true,
+			from:     mkDate(2026, 4, 1),
+			to:       mkDate(2026, 4, 10),
+			wantErr:  true,
 		},
 
 		// ── window / date boundary cases ────────────────────────────────────
@@ -269,18 +268,18 @@ func TestOccurrences(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "from after to — empty result, no error",
+			name:     "from after to — empty result, no error",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 1}, mkDate(2026, 4, 1)),
-			from:    mkDate(2026, 4, 20),
-			to:      mkDate(2026, 4, 10),
-			wantLen: 0,
+			from:     mkDate(2026, 4, 20),
+			to:       mkDate(2026, 4, 10),
+			wantLen:  0,
 		},
 		{
-			name:    "window entirely before start_date — empty result",
+			name:     "window entirely before start_date — empty result",
 			schedule: makeSchedule(schedule.KindDailyEveryN, map[string]any{"n": 1}, mkDate(2026, 5, 1)),
-			from:    mkDate(2026, 4, 1),
-			to:      mkDate(2026, 4, 30),
-			wantLen: 0,
+			from:     mkDate(2026, 4, 1),
+			to:       mkDate(2026, 4, 30),
+			wantLen:  0,
 		},
 		{
 			name: "window entirely after end_date — empty result",

@@ -154,11 +154,11 @@ type scheduleScanner interface {
 
 func scanSchedule(sc scheduleScanner) (*scheduledomain.Schedule, error) {
 	var (
-		s              scheduledomain.Schedule
-		defaultStatus  string
-		kind           string
-		params         []byte
-		endDate        *time.Time
+		s             scheduledomain.Schedule
+		defaultStatus string
+		kind          string
+		params        []byte
+		endDate       *time.Time
 	)
 
 	if err := sc.Scan(

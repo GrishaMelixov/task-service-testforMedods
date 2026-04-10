@@ -90,6 +90,10 @@ func (s *Service) List(ctx context.Context) ([]taskdomain.Task, error) {
 	return s.repo.List(ctx)
 }
 
+func (s *Service) ListByFilter(ctx context.Context, f taskdomain.ListFilter) ([]taskdomain.Task, error) {
+	return s.repo.ListByFilter(ctx, f)
+}
+
 func validateCreateInput(input CreateInput) (CreateInput, error) {
 	input.Title = strings.TrimSpace(input.Title)
 	input.Description = strings.TrimSpace(input.Description)

@@ -17,6 +17,13 @@ type Task struct {
 	Status      Status    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+
+	// ScheduleID links the task to its recurrence template.
+	// Nil for one-off tasks created directly via the API.
+	ScheduleID *int64 `json:"schedule_id,omitempty"`
+	// DueDate is the calendar date this recurrence instance represents.
+	// Nil for one-off tasks.
+	DueDate *time.Time `json:"due_date,omitempty"`
 }
 
 func (s Status) Valid() bool {

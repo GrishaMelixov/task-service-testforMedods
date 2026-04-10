@@ -126,7 +126,7 @@ func (r *Repository) List(ctx context.Context) ([]taskdomain.Task, error) {
 
 // ListByFilter returns tasks matching the given predicates, ordered by due_date
 // ASC (nulls last), then id DESC. All filter fields are optional.
-func (r *Repository) ListByFilter(ctx context.Context, f TaskFilter) ([]taskdomain.Task, error) {
+func (r *Repository) ListByFilter(ctx context.Context, f taskdomain.ListFilter) ([]taskdomain.Task, error) {
 	query := `
 		SELECT id, title, description, status, schedule_id, due_date, created_at, updated_at
 		FROM tasks
@@ -152,7 +152,7 @@ func (r *Repository) ListByFilter(ctx context.Context, f TaskFilter) ([]taskdoma
 	}
 	if f.Status != nil {
 		query += fmt.Sprintf(" AND status = $%d", i)
-		args = append(args, *f.Status)
+		args = append(args, string(*f.Status))
 		i++
 	}
 

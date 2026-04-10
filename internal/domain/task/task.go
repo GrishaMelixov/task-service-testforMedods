@@ -26,6 +26,15 @@ type Task struct {
 	DueDate *time.Time `json:"due_date,omitempty"`
 }
 
+// ListFilter carries optional predicates for task list queries.
+// Zero-value (nil) fields are ignored by the repository.
+type ListFilter struct {
+	ScheduleID *int64
+	From       *time.Time // due_date >= From (date-only comparison)
+	To         *time.Time // due_date <= To
+	Status     *Status
+}
+
 func (s Status) Valid() bool {
 	switch s {
 	case StatusNew, StatusInProgress, StatusDone:

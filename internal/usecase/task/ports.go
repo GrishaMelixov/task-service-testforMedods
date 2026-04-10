@@ -12,6 +12,7 @@ type Repository interface {
 	Update(ctx context.Context, task *taskdomain.Task) (*taskdomain.Task, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context) ([]taskdomain.Task, error)
+	ListByFilter(ctx context.Context, f taskdomain.ListFilter) ([]taskdomain.Task, error)
 }
 
 type Usecase interface {
@@ -20,6 +21,7 @@ type Usecase interface {
 	Update(ctx context.Context, id int64, input UpdateInput) (*taskdomain.Task, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context) ([]taskdomain.Task, error)
+	ListByFilter(ctx context.Context, f taskdomain.ListFilter) ([]taskdomain.Task, error)
 }
 
 type CreateInput struct {

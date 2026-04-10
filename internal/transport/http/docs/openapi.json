@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Task Service API",
-    "version": "1.0.0",
-    "description": "CRUD API for tasks built with clean architecture."
+    "version": "1.1.0",
+    "description": "CRUD API for tasks and recurring schedules built with clean architecture."
   },
   "servers": [
     {
@@ -14,6 +14,10 @@
     {
       "name": "Tasks",
       "description": "Operations with tasks"
+    },
+    {
+      "name": "Schedules",
+      "description": "Recurring task schedule templates"
     }
   ],
   "paths": {
@@ -21,6 +25,40 @@
       "get": {
         "tags": ["Tasks"],
         "summary": "List tasks",
+        "description": "Returns all tasks. All query parameters are optional and can be combined.",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "Filter tasks with due_date >= this date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date", "example": "2026-04-01" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "Filter tasks with due_date <= this date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date", "example": "2026-04-30" }
+          },
+          {
+            "name": "schedule_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter tasks belonging to a specific schedule",
+            "schema": { "type": "integer", "format": "int64", "minimum": 1 }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter tasks by status",
+            "schema": {
+              "type": "string",
+              "enum": ["new", "in_progress", "done"]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Task list",
@@ -32,7 +70,8 @@
                 }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       },
       "post": {
@@ -64,12 +103,7 @@
         "tags": ["Tasks"],
         "summary": "Get task by ID",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64", "minimum": 1 }
-          }
+          { "$ref": "#/components/parameters/ResourceID" }
         ],
         "responses": {
           "200": {
@@ -87,12 +121,7 @@
         "tags": ["Tasks"],
         "summary": "Update task",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64", "minimum": 1 }
-          }
+          { "$ref": "#/components/parameters/ResourceID" }
         ],
         "requestBody": {
           "required": true,
@@ -119,21 +148,154 @@
         "tags": ["Tasks"],
         "summary": "Delete task",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64", "minimum": 1 }
-          }
+          { "$ref": "#/components/parameters/ResourceID" }
         ],
         "responses": {
           "204": { "description": "Deleted" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
+    },
+    "/api/v1/schedules": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "List schedules",
+        "responses": {
+          "200": {
+            "description": "Schedule list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Schedule" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Create schedule",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateScheduleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created schedule",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/v1/schedules/{id}": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "Get schedule by ID",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Schedules"],
+        "summary": "Replace schedule",
+        "description": "Full replacement — all fields are required. Already-materialised tasks are not affected.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateScheduleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated schedule",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Schedules"],
+        "summary": "Delete schedule",
+        "description": "Deletes the schedule. Existing materialised tasks keep their history with schedule_id set to null.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceID" }
+        ],
+        "responses": {
+          "204": { "description": "Deleted" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/schedules/{id}/activate": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Activate schedule",
+        "description": "Marks the schedule active so the generator resumes materialising occurrences. Idempotent.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceID" }
+        ],
+        "responses": {
+          "204": { "description": "Activated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/schedules/{id}/deactivate": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Deactivate schedule",
+        "description": "Marks the schedule inactive so the generator stops creating new tasks. Already-materialised future tasks remain. Idempotent.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceID" }
+        ],
+        "responses": {
+          "204": { "description": "Deactivated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
     }
   },
   "components": {
+    "parameters": {
+      "ResourceID": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "format": "int64", "minimum": 1 }
+      }
+    },
     "responses": {
       "BadRequest": {
         "description": "Bad request",
@@ -205,6 +367,20 @@
             "enum": ["new", "in_progress", "done"],
             "example": "new"
           },
+          "schedule_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "ID of the originating schedule, or null for one-off tasks",
+            "example": 3
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Calendar date this recurring instance represents (YYYY-MM-DD), null for one-off tasks",
+            "example": "2026-04-15"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -215,6 +391,124 @@
             "format": "date-time",
             "example": "2026-03-24T00:00:00Z"
           }
+        }
+      },
+      "ScheduleKind": {
+        "type": "string",
+        "enum": ["daily_every_n", "monthly_days", "specific_dates", "even_odd"],
+        "description": "Recurrence strategy:\n- `daily_every_n` — every N days anchored on start_date\n- `monthly_days` — specific days of every month (1–30)\n- `specific_dates` — explicit list of calendar dates\n- `even_odd` — even or odd days of each month"
+      },
+      "CreateScheduleRequest": {
+        "type": "object",
+        "required": ["title", "default_status", "kind", "params", "start_date"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "Daily patient round"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096,
+            "example": "Morning round of all wards"
+          },
+          "default_status": {
+            "type": "string",
+            "enum": ["new", "in_progress", "done"],
+            "example": "new"
+          },
+          "kind": { "$ref": "#/components/schemas/ScheduleKind" },
+          "params": {
+            "description": "Kind-specific parameters. Shape depends on `kind`:\n- `daily_every_n`: `{\"n\": 1}`\n- `monthly_days`: `{\"days\": [1, 15]}`\n- `specific_dates`: `{\"dates\": [\"2026-04-10\", \"2026-05-01\"]}`\n- `even_odd`: `{\"parity\": \"even\"}`",
+            "oneOf": [
+              {
+                "title": "DailyEveryNParams",
+                "type": "object",
+                "required": ["n"],
+                "properties": {
+                  "n": { "type": "integer", "minimum": 1, "maximum": 365, "example": 1 }
+                }
+              },
+              {
+                "title": "MonthlyDaysParams",
+                "type": "object",
+                "required": ["days"],
+                "properties": {
+                  "days": {
+                    "type": "array",
+                    "items": { "type": "integer", "minimum": 1, "maximum": 30 },
+                    "example": [1, 15]
+                  }
+                }
+              },
+              {
+                "title": "SpecificDatesParams",
+                "type": "object",
+                "required": ["dates"],
+                "properties": {
+                  "dates": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "date" },
+                    "example": ["2026-04-10", "2026-05-01"]
+                  }
+                }
+              },
+              {
+                "title": "EvenOddParams",
+                "type": "object",
+                "required": ["parity"],
+                "properties": {
+                  "parity": { "type": "string", "enum": ["even", "odd"], "example": "even" }
+                }
+              }
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-04-10"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Inclusive upper bound. Null means no end.",
+            "example": "2026-12-31"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone identifier. Defaults to Europe/Moscow when omitted.",
+            "example": "Europe/Moscow"
+          }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 1 },
+          "title": { "type": "string", "example": "Daily patient round" },
+          "description": { "type": "string", "example": "Morning round of all wards" },
+          "default_status": {
+            "type": "string",
+            "enum": ["new", "in_progress", "done"],
+            "example": "new"
+          },
+          "kind": { "$ref": "#/components/schemas/ScheduleKind" },
+          "params": {
+            "type": "object",
+            "description": "Kind-specific parameters (see CreateScheduleRequest.params)"
+          },
+          "start_date": { "type": "string", "format": "date", "example": "2026-04-10" },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": null
+          },
+          "timezone": { "type": "string", "example": "Europe/Moscow" },
+          "active": { "type": "boolean", "example": true },
+          "created_at": { "type": "string", "format": "date-time", "example": "2026-04-10T09:00:00Z" },
+          "updated_at": { "type": "string", "format": "date-time", "example": "2026-04-10T09:00:00Z" }
         }
       },
       "Error": {

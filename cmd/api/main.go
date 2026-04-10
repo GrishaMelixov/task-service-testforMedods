@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -15,7 +17,9 @@ import (
 	transporthttp "example.com/taskservice/internal/transport/http"
 	swaggerdocs "example.com/taskservice/internal/transport/http/docs"
 	httphandlers "example.com/taskservice/internal/transport/http/handlers"
+	scheduleusecase "example.com/taskservice/internal/usecase/schedule"
 	"example.com/taskservice/internal/usecase/task"
+	"example.com/taskservice/internal/worker/generator"
 )
 
 func main() {
@@ -35,12 +39,42 @@ func main() {
 	}
 	defer pool.Close()
 
+	// ── repositories ──────────────────────────────────────────────────────────
 	taskRepo := postgresrepo.New(pool)
-	taskUsecase := task.NewService(taskRepo)
-	taskHandler := httphandlers.NewTaskHandler(taskUsecase)
-	docsHandler := swaggerdocs.NewHandler()
-	router := transporthttp.NewRouter(taskHandler, docsHandler)
+	scheduleRepo := postgresrepo.NewScheduleRepository(pool)
 
+	// ── use cases ─────────────────────────────────────────────────────────────
+	taskUsecase := task.NewService(taskRepo)
+	scheduleUsecase := scheduleusecase.NewService(scheduleRepo)
+
+	// ── transport ─────────────────────────────────────────────────────────────
+	taskHandler := httphandlers.NewTaskHandler(taskUsecase)
+	scheduleHandler := httphandlers.NewScheduleHandler(scheduleUsecase)
+	docsHandler := swaggerdocs.NewHandler()
+	router := transporthttp.NewRouter(taskHandler, scheduleHandler, docsHandler)
+
+	// ── background worker ─────────────────────────────────────────────────────
+	var wg sync.WaitGroup
+
+	if !cfg.GeneratorDisabled {
+		gen := generator.New(generator.Config{
+			Schedules: scheduleRepo,
+			Tasks:     taskRepo,
+			Clock:     time.Now,
+			Location:  cfg.Timezone,
+			Horizon:   time.Duration(cfg.HorizonDays) * 24 * time.Hour,
+			TickEvery: cfg.GeneratorInterval,
+			Log:       logger,
+		})
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gen.Run(ctx)
+		}()
+	}
+
+	// ── HTTP server ───────────────────────────────────────────────────────────
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           router,
@@ -64,11 +98,18 @@ func main() {
 		logger.Error("listen and serve", "error", err)
 		os.Exit(1)
 	}
+
+	// Wait for the generator to finish its current cycle before exiting.
+	wg.Wait()
 }
 
 type config struct {
-	HTTPAddr    string
-	DatabaseDSN string
+	HTTPAddr          string
+	DatabaseDSN       string
+	Timezone          *time.Location
+	HorizonDays       int
+	GeneratorInterval time.Duration
+	GeneratorDisabled bool
 }
 
 func loadConfig() config {
@@ -80,6 +121,37 @@ func loadConfig() config {
 	if cfg.DatabaseDSN == "" {
 		panic(fmt.Errorf("DATABASE_DSN is required"))
 	}
+
+	// Timezone used for computing day boundaries in the generator.
+	tzName := envOrDefault("TASKSERVICE_TIMEZONE", "Europe/Moscow")
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		panic(fmt.Errorf("TASKSERVICE_TIMEZONE %q is not a valid IANA timezone: %w", tzName, err))
+	}
+	cfg.Timezone = loc
+
+	// How many days ahead to materialise tasks.
+	cfg.HorizonDays = 30
+	if v := os.Getenv("GENERATOR_HORIZON_DAYS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			panic(fmt.Errorf("GENERATOR_HORIZON_DAYS must be a positive integer, got %q", v))
+		}
+		cfg.HorizonDays = n
+	}
+
+	// How often the generator runs.
+	cfg.GeneratorInterval = time.Hour
+	if v := os.Getenv("GENERATOR_INTERVAL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d <= 0 {
+			panic(fmt.Errorf("GENERATOR_INTERVAL must be a positive duration (e.g. 1h), got %q", v))
+		}
+		cfg.GeneratorInterval = d
+	}
+
+	// Escape-hatch to disable the generator for local debugging.
+	cfg.GeneratorDisabled = os.Getenv("GENERATOR_DISABLED") == "true"
 
 	return cfg
 }

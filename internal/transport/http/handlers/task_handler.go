@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -98,7 +100,13 @@ func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.usecase.List(r.Context())
+	f, err := parseListFilter(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	tasks, err := h.usecase.ListByFilter(r.Context(), f)
 	if err != nil {
 		writeUsecaseError(w, err)
 		return
@@ -110,6 +118,47 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, response)
+}
+
+// parseListFilter reads optional query parameters from r and builds a ListFilter.
+// All parameters are optional; missing ones leave the corresponding filter field nil.
+func parseListFilter(r *http.Request) (taskdomain.ListFilter, error) {
+	q := r.URL.Query()
+	var f taskdomain.ListFilter
+
+	if v := q.Get("from"); v != "" {
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			return taskdomain.ListFilter{}, fmt.Errorf("from must be YYYY-MM-DD")
+		}
+		f.From = &t
+	}
+
+	if v := q.Get("to"); v != "" {
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			return taskdomain.ListFilter{}, fmt.Errorf("to must be YYYY-MM-DD")
+		}
+		f.To = &t
+	}
+
+	if v := q.Get("schedule_id"); v != "" {
+		id, err := strconv.ParseInt(v, 10, 64)
+		if err != nil || id <= 0 {
+			return taskdomain.ListFilter{}, fmt.Errorf("schedule_id must be a positive integer")
+		}
+		f.ScheduleID = &id
+	}
+
+	if v := q.Get("status"); v != "" {
+		s := taskdomain.Status(v)
+		if !s.Valid() {
+			return taskdomain.ListFilter{}, fmt.Errorf("status must be one of: new, in_progress, done")
+		}
+		f.Status = &s
+	}
+
+	return f, nil
 }
 
 func getIDFromRequest(r *http.Request) (int64, error) {

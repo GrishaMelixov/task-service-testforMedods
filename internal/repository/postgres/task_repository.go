@@ -181,7 +181,7 @@ func (r *Repository) ListByFilter(ctx context.Context, f taskdomain.ListFilter) 
 // the existing row is returned unchanged (ON CONFLICT DO NOTHING).
 // Returns (nil, nil) when the task already existed — callers should treat this
 // as a no-op, not an error.
-func (r *Repository) CreateFromSchedule(ctx context.Context, s *scheduledomain.Schedule, dueDate time.Time) (*taskdomain.Task, error) {
+func (r *Repository) CreateFromSchedule(ctx context.Context, s *scheduledomain.Schedule, dueDate time.Time) (any, error) {
 	const query = `
 		INSERT INTO tasks (title, description, status, schedule_id, due_date, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -207,7 +207,7 @@ func (r *Repository) CreateFromSchedule(ctx context.Context, s *scheduledomain.S
 		return nil, err
 	}
 
-	return task, nil
+	return task, nil //nolint:ireturn // interface requires any return type
 }
 
 type taskScanner interface {

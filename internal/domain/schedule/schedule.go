@@ -99,7 +99,50 @@ type MonthlyDaysParams struct {
 // SpecificDatesParams is the typed shape of Schedule.Params for KindSpecificDates.
 // Dates are interpreted as calendar dates in Schedule.Timezone.
 type SpecificDatesParams struct {
-	Dates []time.Time `json:"dates"`
+	Dates []Date `json:"dates"`
+}
+
+// Date is a calendar date (no time of day, no timezone) serialised as "YYYY-MM-DD".
+// It is stored inside Schedule.Params and inside API payloads for fields that
+// represent pure dates.
+type Date struct {
+	Year  int
+	Month time.Month
+	Day   int
+}
+
+// DateFromTime converts a time.Time to a Date using the given location.
+func DateFromTime(t time.Time, loc *time.Location) Date {
+	y, m, d := t.In(loc).Date()
+	return Date{Year: y, Month: m, Day: d}
+}
+
+// In returns the Date as midnight in loc.
+func (d Date) In(loc *time.Location) time.Time {
+	return time.Date(d.Year, d.Month, d.Day, 0, 0, 0, 0, loc)
+}
+
+// String returns the canonical YYYY-MM-DD representation.
+func (d Date) String() string {
+	return d.In(time.UTC).Format("2006-01-02")
+}
+
+// MarshalJSON encodes the date as a quoted YYYY-MM-DD string.
+func (d Date) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + d.String() + `"`), nil
+}
+
+// UnmarshalJSON parses a quoted YYYY-MM-DD string into d.
+func (d *Date) UnmarshalJSON(b []byte) error {
+	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
+		return ErrInvalidDate
+	}
+	t, err := time.Parse("2006-01-02", string(b[1:len(b)-1]))
+	if err != nil {
+		return ErrInvalidDate
+	}
+	d.Year, d.Month, d.Day = t.Year(), t.Month(), t.Day()
+	return nil
 }
 
 // EvenOddParams is the typed shape of Schedule.Params for KindEvenOdd.

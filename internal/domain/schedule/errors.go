@@ -16,3 +16,7 @@ var ErrInvalidParams = errors.New("invalid schedule params")
 // ErrInvalidTimezone is returned when a schedule's Timezone cannot be resolved
 // by time.LoadLocation.
 var ErrInvalidTimezone = errors.New("invalid timezone")
+
+// ErrInvalidDate is returned by Date.UnmarshalJSON when the input is not a
+// well-formed YYYY-MM-DD string.
+var ErrInvalidDate = errors.New("invalid date format, expected YYYY-MM-DD")
